@@ -4,13 +4,14 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.action_chains import ActionChains
-from selenium.webdriver.common.keys import Keys
 from webdriver_manager.chrome import ChromeDriverManager
+
+TEST_MODE = True
+PRODUCT_LIMIT = 3 if TEST_MODE else None
 
 # Configure Chrome options
 options = Options()
-options.add_argument("--headless")  # Run in headless mode
+options.add_argument("--headless")
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
 
@@ -26,11 +27,11 @@ time.sleep(3)  # Allow page to load
 # Step 1: Extract product categories
 categories = driver.find_elements(By.CSS_SELECTOR, "nav a")
 category_links = {
-    category.text: category.get_attribute("href") for category in categories[:12]
+    category.text: category.get_attribute("href") for category in categories[:2]
 }
 
 # Step 2: Extract product data from each category
-all_products = []
+categorized_products = {}
 
 for category_name, category_url in category_links.items():
     print(f"Scraping category: {category_name}")
@@ -42,9 +43,12 @@ for category_name, category_url in category_links.items():
     product_elements = driver.find_elements(
         By.CSS_SELECTOR, "a.product-item-inner-wrap"
     )
-
-    print(product_elements)
     product_links = [elem.get_attribute("href") for elem in product_elements]
+
+    if TEST_MODE:
+        product_links = product_links[:PRODUCT_LIMIT]  # Limit products if in test mode
+
+    categorized_products[category_name] = []
 
     for product_url in product_links:
         driver.get(product_url)
@@ -66,26 +70,28 @@ for category_name, category_url in category_links.items():
 
         try:
             quantity = driver.find_element(
-                By.CSS_SELECTOR, "h1.product-tile__weight"
+                By.CSS_SELECTOR, "h1.product-tile__name"
             ).text.rsplit(" ", 1)[0]
         except:
             quantity = "N/A"
 
         try:
-            barcode = driver.find_element(By.CSS_SELECTOR, "div.product-remark").text
+            barcode = driver.find_element(
+                By.CSS_SELECTOR, "div.product-Details-sku"
+            ).text
         except:
             barcode = "N/A"
 
         try:
             product_details = driver.find_element(
-                By.CSS_SELECTOR, ".product-description"
+                By.CSS_SELECTOR, "div.accordion-body"
             ).text
         except:
             product_details = "N/A"
 
         try:
             price = driver.find_element(
-                By.CSS_SELECTOR, "div.span.product-Details-current-price"
+                By.CSS_SELECTOR, "span.product-Details-current-price"
             ).text
         except:
             price = "N/A"
@@ -112,12 +118,12 @@ for category_name, category_url in category_links.items():
             "url": product_url,
         }
 
-        all_products.append(product_data)
+        categorized_products[category_name].append(product_data)
         print(f"Scraped: {product_name}")
 
 # Save data to JSON
 with open("products.json", "w", encoding="utf-8") as f:
-    json.dump(all_products, f, indent=4, ensure_ascii=False)
+    json.dump(categorized_products, f, indent=4, ensure_ascii=False)
 
 # Close driver
 driver.quit()
