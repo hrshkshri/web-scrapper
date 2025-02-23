@@ -6,7 +6,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 
-TEST_MODE = True
+TEST_MODE = False
 PRODUCT_LIMIT = 3 if TEST_MODE else None
 
 # Configure Chrome options
@@ -27,7 +27,7 @@ time.sleep(3)  # Allow page to load
 # Step 1: Extract product categories
 categories = driver.find_elements(By.CSS_SELECTOR, "nav a")
 category_links = {
-    category.text: category.get_attribute("href") for category in categories[:2]
+    category.text: category.get_attribute("href") for category in categories[:12]
 }
 
 # Step 2: Extract product data from each category
